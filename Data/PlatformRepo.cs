@@ -8,25 +8,30 @@ namespace PlatformService.Data
         public PlatformRepo(AppDbContext context)
         {
             _context = context;
-        }        
+        }
         public void CreatePlatform(Platform platform)
         {
-            throw new NotImplementedException();
+            if (platform == null)
+            {
+                throw new ArgumentNullException(nameof(platform));
+            }
+            _context.Add(platform);
         }
 
         public IEnumerable<Platform> GetAllPlatforms()
         {
-            throw new NotImplementedException();
+            return _context.Platforms.ToList();
         }
 
         public Platform GetPlatformById(int id)
         {
-            throw new NotImplementedException();
+            return _context.Platforms.FirstOrDefault(p => p.Id == id);
+
         }
 
         public bool SaveChanges()
         {
-            throw new NotImplementedException();
+            return _context.SaveChanges() >= 0;
         }
     }
 }
