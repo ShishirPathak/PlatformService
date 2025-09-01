@@ -1,9 +1,11 @@
+using System.Threading.Tasks;
 using AutoMapper;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using PlatformService.Data;
 using PlatformService.DTOs;
 using PlatformService.Models;
+using PlatformService.SyncDataServices.Http;
 
 namespace PlatformService.Controllers
 {
@@ -13,10 +15,12 @@ namespace PlatformService.Controllers
     {
         private readonly IMapper _mapper;
         private readonly IPlatformRepo _platformRepo;
-        public PlatformController(IPlatformRepo repo, IMapper mapper)
+        private readonly ICommandDataClient _commandDataClient;
+        public PlatformController(IPlatformRepo repo, IMapper mapper, ICommandDataClient commandDataClient)
         {
             _platformRepo = repo;
             _mapper = mapper;
+            _commandDataClient = commandDataClient;
         }
 
         [HttpGet]
@@ -37,13 +41,22 @@ namespace PlatformService.Controllers
             return NotFound();
         }
         [HttpPost]
-        public ActionResult<PlatformReadDTO> CreatePlatform(PlatformCreateDTO platformCreateDTO)
+        public async Task<ActionResult<PlatformReadDTO>> CreatePlatform(PlatformCreateDTO platformCreateDTO)
         {
             var platformModel = _mapper.Map<Platform>(platformCreateDTO);
             _platformRepo.CreatePlatform(platformModel);
             _platformRepo.SaveChanges();
 
             var platformReadDTO = _mapper.Map<PlatformReadDTO>(platformModel);
+
+            try
+            {
+               await _commandDataClient.SendPlatformToCommand(platformReadDTO);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"--> Could not send synchronously: {ex.Message}");
+            }
 
             return CreatedAtRoute(nameof(GetPlatformById), new { Id = platformReadDTO.Id }, platformReadDTO);
         }
